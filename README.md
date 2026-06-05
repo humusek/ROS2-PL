@@ -1,192 +1,33 @@
-# Poradnik: Instalacja ROS 2 ze źródeł na Linux Mint & Ubuntu
+# Projekt Testowy - Intel RealSense SR300: Detekcja i Wymiarowanie Skał
 
-Oficjalny poradnik instalacji ROS 2 (wersja Jazzy Jalisco) skompilowany ze źródeł, dostosowany specjalnie dla systemów Linux Mint oraz Ubuntu.
+*English description below*
 
-> [!NOTE]
-> Czytasz dokumentację starszej, ale wciąż wspieranej wersji ROS 2. Aby uzyskać informacje o najnowszej wersji, zapoznaj się z wersją **Lyrical**.
+## Opis projektu
+Niniejszy projekt jest projektem testowym realizowanym przy użyciu kamery głębi Intel RealSense SR300. Głównym celem systemu jest integracja strumienia wizyjnego oraz danych o głębi z modelem sztucznej inteligencji (AI) w celu automatycznego wykrywania skał oraz precyzyjnego określania ich wymiarów w przestrzeni trójwymiarowej.
 
----
+### Główne funkcjonalności
+- **Obsługa kamery RealSense SR300:** Uruchomienie urządzenia, konfiguracja oraz jednoczesne przechwytywanie strumienia RGB i mapy głębi.
+- **Model AI do detekcji skał:** Wykorzystanie sieci neuronowej dedykowanej do rozpoznawania i lokalizowania obiektów (skał) na obrazie w czasie rzeczywistym.
+- **Wymiarowanie obiektów:** Algorytm obliczający rzeczywiste wymiary (szerokość, wysokość, głębokość) wykrytych skał na podstawie powiązanych danych z sensora głębi.
 
-## Spis treści
-1. [Wymagania systemowe](#1-wymagania-systemowe)
-2. [Konfiguracja systemu](#2-konfiguracja-systemu)
-   * [Ustawienia regionalne (Locale)](#ustawienia-regionalne-locale)
-   * [Włączenie wymaganych repozytoriów](#wlaczenie-wymaganych-repozytoriow)
-   * [Instalacja narzędzi programistycznych](#instalacja-narzedzi-programistycznych)
-3. [Budowanie ROS 2](#3-budowanie-ros-2)
-   * [Pobieranie kodu źródłowego](#pobieranie-kodu-zrodlowego)
-   * [Instalacja zależności przy użyciu rosdep](#instalacja-zaleznosci-przy-uzyciu-rosdep)
-   * [Kompilacja kodu](#kompilacja-kodu-w-przestrzeni-roboczej)
-4. [Konfiguracja środowiska](#4-konfiguracja-srodowiska)
-5. [Uruchomienie przykładowych aplikacji](#5-uruchomienie-przykladowych-aplikacji)
-6. [Alternatywne kompilatory (Clang)](#6-alternatywne-kompilatory-clang)
-7. [Odinstalowanie środowiska](#7-odinstalowanie-srodowiska)
+### Instrukcja instalacji ROS
+W repozytorium znajduje się dedykowany katalog zawierający kompletną, spolszczoną dokumentację dotyczącą konfiguracji środowiska:
+- **Katalog:** `Poradnik-PL-Instalacja`
+- **Zawartość:** Szczegółowa instrukcja instalacji i konfiguracji systemu ROS (Robot Operating System) krok po kroku.
 
 ---
 
-## 1. Wymagania systemowe
+# Test Project - Intel RealSense SR300: Rock Detection and Dimensioning
 
-Obecne platformy docelowe oparte na Debianie dla **Jazzy Jalisco** to:
-* **Poziom 1:** Ubuntu Linux - Noble (24.04) 64-bit
-* **Poziom 3:** Ubuntu Linux - Jammy (22.04) 64-bit
-* **Poziom 3:** Debian Linux - Bookworm (12) 64-bit
+## Project Overview
+This is a test project developed using the Intel RealSense SR300 depth camera. The primary objective of the system is to integrate the video stream and depth data with an artificial intelligence (AI) model to automatically detect rocks and precisely determine their dimensions in 3D space.
 
-Zgodnie ze specyfikacją zdefiniowaną w **REP 2000**.
+### Key Features
+- **RealSense SR300 Support:** Launching the device, configuring settings, and simultaneously capturing the RGB stream and depth map.
+- **AI Model for Rock Detection:** Utilizing a neural network tailored for real-time recognition and localization of objects (rocks) in the frame.
+- **Object Dimensioning:** An algorithm that calculates the actual physical dimensions (width, height, depth) of the detected rocks using the corresponding depth sensor data.
 
----
-
-## 2. Konfiguracja systemu
-
-### Ustawienia regionalne (Locale)
-Upewnij się, że Twój system obsługuje kodowanie UTF-8. W minimalnych środowiskach (np. Docker) kodowanie może być ustawione domyślnie na POSIX.
-
-```bash
-locale
-sudo apt update && sudo apt install locales
-sudo locale-gen en_US en_US.UTF-8
-sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-export LANG=en_US.UTF-8
-locale
-```
-
-### Włączenie wymaganych repozytoriów
-Dodaj oficjalne repozytorium apt ROS 2 do swojego systemu. Najpierw aktywuj repozytorium **Ubuntu Universe**:
-
-```bash
-sudo apt install software-properties-common
-sudo add-apt-repository universe
-```
-
-Następnie pobierz i zainstaluj klucze oraz konfigurację źródeł poprzez pakiet ros2-apt-source:
-
-```bash
-sudo apt update && sudo apt install curl -y
-export ROS_APT_SOURCE_VERSION=$(curl -s [https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest](https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest) | grep -F "tag_name" | awk -F'"' '{print $4}')
-curl -L -o /tmp/ros2-apt-source.deb "[https://github.com/ros-infrastructure/ros-apt-source/releases/download/$](https://github.com/ros-infrastructure/ros-apt-source/releases/download/$){ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
-sudo dpkg -i /tmp/ros2-apt-source.deb
-```
-
-### Instalacja narzędzi programistycznych
-Zainstaluj pakiety deweloperskie niezbędne do pobrania i skompilowania ROS 2:
-
-```bash
-sudo apt update && sudo apt install -y \
-  python3-flake8-blind-except \
-  python3-flake8-class-newline \
-  python3-flake8-deprecated \
-  python3-mypy \
-  python3-pip \
-  python3-pytest \
-  python3-pytest-cov \
-  python3-pytest-mock \
-  python3-pytest-repeat \
-  python3-pytest-rerunfailures \
-  python3-pytest-runner \
-  python3-pytest-timeout \
-  ros-dev-tools
-```
-
----
-
-## 3. Budowanie ROS 2
-
-### Pobieranie kodu źródłowego
-Utwórz dedykowany katalog przestrzeni roboczej (workspace) i pobierz repozytoria:
-
-```bash
-mkdir -p ~/ros2_jazzy/src
-cd ~/ros2_jazzy
-vcs import --input [https://raw.githubusercontent.com/ros2/ros2/jazzy/ros2.repos](https://raw.githubusercontent.com/ros2/ros2/jazzy/ros2.repos) src
-```
-
-### Instalacja zależności przy użyciu rosdep
-Przed zainstalowaniem zależności upewnij się, że Twój system operacyjny posiada zaktualizowane pakiety. Jeśli używasz Linux Mint, dodaj flagę wymuszającą system, tak jak w poleceniu poniżej.
-
-```bash
-sudo apt upgrade
-sudo rosdep init
-rosdep update
-rosdep install --from-paths src --ignore-src -y --skip-keys "fastcdr rti-connext-dds-6.0.1 urdfdom_headers" --os=ubuntu:noble
-```
-
-### Dodatkowe implementacje RMW (Opcjonalnie)
-Domyślnym oprogramowaniem pośredniczącym (middleware) używanym przez ROS 2 jest **Fast DDS**. Istnieje możliwość zmiany implementacji RMW podczas kompilacji lub w czasie uruchamiania aplikacji.
-
-### Instalacja colcon mixins
-
-```bash
-colcon mixin add default [https://github.com/colcon/colcon-mixin-repository/raw/master/index.yaml](https://github.com/colcon/colcon-mixin-repository/raw/master/index.yaml)
-colcon mixin update default
-```
-
-### Kompilacja kodu w przestrzeni roboczej
-Przed budowaniem upewnij się, że środowisko terminala jest "czyste" i nie posiada załadowanych innych wersji ROS 2 (np. wersji binarnych). Polecenie `printenv | grep -i ROS` powinno zwracać pusty wynik.
-
-```bash
-cd ~/ros2_jazzy/
-colcon build --symlink-install --mixin release
-```
-
-W przypadku problemów z kompilacją niektórych przykładów, możesz wykluczyć kłopotliwe pakiety za pomocą flagi `--packages-skip`. Przykładowo, aby pominąć pakiety zależne od dużej biblioteki OpenCV:
-
-```bash
-colcon build --symlink-install --packages-skip image_tools intra_process_demo
-```
-
----
-
-## 4. Konfiguracja środowiska
-
-Aby aktywować nowo zbudowane środowisko ROS 2 w danym oknie terminala, wykonaj:
-
-```bash
-. ~/ros2_jazzy/install/local_setup.bash
-```
-
-> [!NOTE]
-> Jeśli korzystasz z innej powłoki systemowej niż Bash, podmień rozszerzenie `.bash` na właściwy plik konfiguracyjny (np. `setup.sh`, `setup.zsh`).
-
----
-
-## 5. Uruchomienie przykładowych aplikacji
-
-Przetestuj poprawność działania komunikacji.
-
-W **pierwszym oknie terminala** załaduj konfigurację i uruchom węzeł nadawcy (C++):
-
-```bash
-. ~/ros2_jazzy/install/local_setup.bash
-ros2 run demo_nodes_cpp talker
-```
-
-W **drugim oknie terminala** załaduj konfigurację i uruchom węzeł odbiorcy (Python):
-
-```bash
-. ~/ros2_jazzy/install/local_setup.bash
-ros2 run demo_nodes_py listener
-```
-
-Prawidłowo działające środowisko wyświetli komunikat `Publishing messages` w oknie nadawcy oraz `I heard those messages` w oknie odbiorcy.
-
----
-
-## 6. Alternatywne kompilatory (Clang)
-
-W celu zmiany domyślnego kompilatora `gcc` na `Clang`, ustaw zmienne środowiskowe i wymuś pełną rekonfigurację narzędzia CMake:
-
-```bash
-sudo apt install clang
-export CC=clang
-export CXX=clang++
-colcon build --cmake-force-configure
-```
-
----
-
-## 7. Odinstalowanie środowiska
-
-Aby "odinstalować" środowisko, wystarczy uruchomić nowy terminal bez wczytywania pliku `local_setup.bash`. Jeśli chcesz dodatkowo usunąć pliki z dysku i zwolnić miejsce, usuń cały katalog przestrzeni roboczej:
-
-```bash
-rm -rf ~/ros2_jazzy
-```
+### ROS Installation Guide
+The repository includes a dedicated directory containing complete documentation for the environment setup:
+- **Directory:** `Poradnik-PL-Instalacja`
+- **Content:** A comprehensive, step-by-step ROS (Robot Operating System) installation and configuration guide written in Polish.
